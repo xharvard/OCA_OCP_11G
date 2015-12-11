@@ -1,0 +1,99 @@
+考试目标：
+	051.7.1	定义子查询
+	051.7.2	描述子查询能够解决的问题的类型
+	051.7.3	列举子查询的类型
+	051.7.4	写单行和多行子查询
+	051.8.1	描述集合运算符
+	051.8.2	使用集合运算符将多个查询合并为一个查询
+	051.8.3	控制返回行的顺序
+	
+
+
+13.1 定义子查询
+	子查询是嵌套在SELECT,INSERT,UPDATE,DELETE语句内或者嵌套在其他子查询内的查询。
+	
+	可以使用子查询的位置：SELECT,FROM,WHERE,HAVING
+	
+	
+13.2 描述子查询能够解决的问题的类型
+	13.2.1 将子查询的结果用于比较
+		select last_name from employees
+			where salary < (select avg(salary) from employees);
+
+	13.2.2 生成对其执行SELECT语句的表
+		select avg(salary), country_id from
+			(select salary, department_id, location_id, l.country_id
+			 from employees join departments d using (department_id)
+			 join locations l using (location_id))
+		group by country_id;
+
+	13.2.3 生成投影值
+		select (select max(salary) from employees) * (select max(commission_pct) from employees)
+		from dual;
+
+	13.2.4 生成传递给DML语句的行
+		update employees set salary=(select avg(salary) from employees);
+		
+	
+	注：在INSERT语句的VALUES子句中使用子查询是不合法的。
+	insert into dates select sysdate from dual;		// 合法
+	insert into dates(date_col) values (select sysdate from dual);	// 不合法
+	
+	
+
+13.3 列举子查询的类型
+	三类：单行子查询，多行子查询，关联子查询
+	
+	13.3.1 单行和多行子查询
+		单行子查询返回一行，特例是标量子查询，它返回只有一列的一行。
+		多行子查询返回行集合。
+		
+		适用于单行子查询的比较运算符：=，>,>=,<,<=,<>,!=
+		适用于多行子查询的比较运算符：IN,NOT IN, ANY, ALL	
+
+	13.3.2 关联子查询
+		如果子查询引用父查询中的列，那么其结果就依赖父查询。
+		
+		查询所有薪水小于平均值的员工：
+			select last_name from employees
+			where salary < (select avg(salary) from employee);
+			
+		查询薪水小于部门平均值的员工：
+			select p.last_name, p.department_id from employees p
+			where p.salary < (
+				select avg(s.salary) from employees s
+				where s.department_id = p.department_id
+			);
+
+练习：
+	表employees里last_name为'xhh'的记录有两条
+	
+	1，select last_name from employees
+	   where salary > (select salary from employees where last_name = 'xhh');
+	   将返回错误，> 运算不能用于多条记录的比较
+	   
+	解决方案1：
+	   select last_name from employees
+	   where salary > all (select salary from employees where last_name = 'xhh');
+	   
+	解决方案2：
+	   select last_name from employees
+	   where salary > (select max(salary) from employees where last_name = 'xhh');
+	   
+
+	ANY:返回匹配列表中任意值的行
+	ALL:返回匹配列表中所有值的行
+		ANY和ALL的等价含义
+		< ANY		小于最高
+		> ANY		大于最低
+		= ANY		等于IN
+		> ALL		大于最高
+		< ALL		小于最低
+	
+	
+
+	
+
+
+
+作成日：2015/10/14

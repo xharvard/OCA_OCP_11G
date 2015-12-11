@@ -1,0 +1,102 @@
+考试目标：
+	052.5.1  配置和管理Oracle网络
+	052.5.2 使用Oracle共享服务器体系结构
+	
+
+4.1	配置和管理Oracle网络(客户端-服务器结构)
+	SQL语句的执行经历：分析，绑定，执行，取出。
+	
+	Oracle Net与通信协议“：
+		11G版本，Oracle支持TCP，带有套接字的TCP，windows命名管道（Named Pipes，NMP），
+		套接字直接协议（Sockets Direct Protocol,SDP),进程间通信协议（Inter-Process Communication,IPC)
+		
+	建立会话：
+		CONNECT USER/PASS@XXX
+
+	创建侦听器：
+		在listener.ora文件中定义，默认位置：ORACLE_HOME/network/admin目录下。
+		三个管理工具：Database Control， Net Manager， Net Configuration Assistant
+		
+	数据库注册：针对一个实例产生服务器进程需要使用侦听器。通过注册过程，侦听器能够查找到所连接的实例。
+		分为：静态注册和动态注册两种。
+		
+		1，静态注册：在listener.ora文件中配置
+		
+		2，动态注册：首选方法。
+			通过参数local_listener绑定侦听器的网络地址，然后PMON进程将每一分钟自动执行注册，或者可以使用下述命令强制注册。
+				alter system register;
+			
+			如果侦听器在默认端口1521上运行，则将完全不需要配置动态注册，所有实例将自动查看相应端口上本地主机上的侦听器。
+			如果侦听器不在默认端口上，则必须通过设置local_listener参数和重新注册来指定侦听器的位置。
+			
+			例如：alter system set local_listener=list2;  list2为侦听器的名称。
+				 alter system register;
+
+
+	名称解析技术：
+		1，Easy Connect：只能使用TCP协议。不能使用Oracle Net的高级性能（如负载平衡等），所以终端用户很少使用这种方法。
+					调用方法：  connect store/admin123@xxx.com.cn:1522/ocp11g
+						如果使用1521端口，则可以简写为： connect store/admin123@xxx.com.cn
+						
+		2,本地命名：可以为连接字符串提供一个Oracle Net服务别名，通过一个本地文件解析为完整的网络地址。即tnsnames.ora文件。
+					支持Oracle的所有协议及高级性能。推荐使用。
+					
+		3，目录命名和外部命令：用户会指向一个解析别名的LDAP目录服务器。集中处理所有请求，比本地命名维护容易。
+							外部命令类似俞目录命名，只是使用第三方命名服务，如SUN公司的NIS+等。
+	
+	Net Manager工具具有三个分支：Profile分支设置Oracle Net会话的配置，对应文件：sqlnet.ora
+							   Service Naming分支：Oracle Net服务别名，对应文件：tnsnames.ora
+							   Listeners分支：配置侦听器，对应文件：listener.ora
+							
+	测试连接字符串：TNSPING ocp11g
+	
+	文件名和TNSADMIN环境变量：
+		配置Oracle Net时，涉及3个关键文件：listener.ora，tnsnames.ora，sqlnet.ora
+		默认方式下，这3个文件存放在ORACLE_HOME/network/admin目录中，可以使用TNS_ADMIN重新找到他们。
+		用于具有多个Oracle主目录的系统，便于统一管理。
+		set TNS_ADMIN=c:/oracle/net   将3个文件统一放到net目录中。
+		
+	
+	数据库连接：
+		create database link prodstore connect to store identified by admin123 using 'prod';
+		
+		select * from orders@prodstore;	
+		
+	例子：生产数据库（PROD)包含模式STORE,它有两个表：ORDERS和PRODUCTS。如上面定义。
+		 开发数据库（DEV）也包含模式STORE。
+		 用户连接到名为TEST的第三个数据库，需要使用生产数据来更新开发数据：
+		 1，定义到生产和开发数据库的数据库连接
+		 	create database link prodstore connect to store identified by prodpasswd using 'prod';
+		 	create database link devstore  connect to store identified by devpasswd  using 'dev';
+		 	
+		 2,更新开发模式
+		 	truncate table orders@devstore;
+		 	truncate table products@devstore;
+		 	
+		 	insert into orders@devstore select * from orders@prodstore;
+		 	insert into products@devstore select * from products@prodstore;
+		 	
+		 	commit;
+		
+		3,如果要更改产品名称，可以使用下面的语句在两个数据库并发执行：
+			update products@prodstore set product_name='IOS' where product_id=10;
+			update products@devstore set product_name='IOS' where product_id=10;
+			
+			commit;
+
+		Oracle将会把2个数据库的操作视为原子事务，要么都提交，要么都回滚。
+		
+		
+
+4.2	使用Oracle共享服务器体系结构
+	用户进程连接到调度程序，这些连接是持久的。
+	所有调度程序在一个公共队列上放入请求。
+	共享服务器进程从公共队列取走请求。
+	每个调度程序都有自己的响应队列。
+	共享服务器进程将结果放在适当调度程序的响应队列上。
+	调度程序取出结果，将结果返回给适当的用户进程。
+	共享服务器至少配置两个实例参数：dispatchers和shared_servers。
+
+
+	
+作成日：2015/9/25

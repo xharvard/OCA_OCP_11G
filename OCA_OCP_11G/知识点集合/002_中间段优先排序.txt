@@ -1,0 +1,41 @@
+要求：对工资在2000-3000之间的员工比较感兴趣，于是要求工资在这个范围的员工要排在前面。
+
+	创建测试表：
+	create or replace view employee as
+	select 'E1' as ename, 1900 as salary from dual
+	union all
+	select 'E2' as ename, 2010 as salary from dual
+	union all
+	select 'E3' as ename, 2700 as salary from dual
+	union all
+	select 'E4' as ename, 2300 as salary from dual
+	union all
+	select 'E5' as ename, 3500 as salary from dual
+	union all
+	select 'E6' as ename, 2600 as salary from dual
+	;
+	
+SQL> select * from employee;
+
+EN     SALARY
+-- ----------
+E1       1900
+E2       2010
+E3       2700
+E4       2300
+E5       3500
+E6       2600
+
+SQL> select * from employee order by case when salary between 2000 and 3000 then 1 else 2 end, salary;
+
+EN     SALARY
+-- ----------
+E2       2010
+E4       2300
+E6       2600
+E3       2700
+E1       1900
+E5       3500
+
+
+作成日：2015/10/16

@@ -1,0 +1,26 @@
+考试目标：
+	052.2.1 了解Oracle数据库管理工具
+	052.2.2  规划Oracle数据库的安装
+	052.2.3  使用OUI安装Oracle软件
+	052.3.1  使用DBCA创建数据库
+	
+2.1 了解Oracle数据库管理工具
+	OUI:Oracle Universal Install:安装Oracle软件。）
+	DBCA:Database Configuration Assistant:用于创建和修改数据库的图形工具。（Java开发的）
+	DBUA:Database Upgrade Assistant:升级数据库的图形工具。（Java开发的）
+	SQL*Plus/SQL Developer:连接Oracle数据库的工具。（命令行/图形化）
+	Oracle Enterprise Manager:常用版本是Database Control管理一个数据库,而Grid Control用于管理多个数据库。
+	Oracle Net Manager/Oracle Net Configuration Assistant:配置Oracle网络环境的Java图形工具。
+	
+	导入/导出工具：针对数据库运行查询，以便提取对象定义和数据，作为一组DDL和DML命令将其写出到文件。
+				    导入读取文件，并执行DDL和DML语句，以便创建对象，并在其中输入数据。
+				  由于它们通过普通用户会话（客户端-服务器工具）来完成工作，不适用大规模的操作。
+
+	Data Pump(10G引入)：功能与导入/导出工具类似：从一个数据库提取数据，将数据写出到文件，并将数据插入到另一个数据库。
+					   实现方法不同：使用后台进程，而非服务器进程来读写数据，处理速度大大加快。目前的首选工具。
+					   
+	SQL*Loader:将大量数据从文件加载到数据库。可按多种格式来布置这些文件。
+	
+	备份程序：RMAN(Recovery Manager),Oracle Secure Backup
+	
+作成日：2015/9/22

@@ -1,0 +1,141 @@
+考试目标：
+	051.6.1	使用同等联接和非同等联接编写SELECT语句访问多个表的数据
+	051.6.2	使用自联接将表联接到自身
+	051.6.3	使用外联接查看不满足联接条件的数据
+	051.6.4	生成两个或者多个表的笛卡尔乘积
+	
+
+
+12.1 使用同等联接和非同等联接编写SELECT语句访问多个表的数据
+	12.1.1	联接的类型
+		两种基本联接是同等联接和非同等联接。
+	
+		假定表regions有2列：region_id,region_name
+		表countries有3列：country_id,country_name,region_id
+		    
+		1，自然联接(NATURAL JOIN, USING, ON):源表和目标表具有相同名称的列时，可以执行自然联接。
+			select region_name
+			from regions natural join countries
+			where country_name = 'China';
+			
+			如果有多列名字相同，但可能只要其中某一列或几列作为联接条件，可以使用USING。
+			select region_name
+			from regions join countries
+			using(region_id)
+			where country_name = 'China';
+
+			更普遍的情况是两边列名不一样的时候，使用ON。
+			select region_name
+			from regions join countries
+			on (regions.xxx = countries.yyy)
+			where country_name = 'China';
+
+		2,外联接	：查询检索包含非匹配联接列值的行。
+		
+		3,交叉联接（CROSS JOIN）：两个集合或者矩阵之间的交叉乘积。源表和目标表行的每个组合都创建一行输出。又叫笛卡尔乘积。
+		
+		4,Oracle联接语法
+			自然联接：	select regions.region_name, countries.country_name
+						from regions, countries
+						where regions.region_id = countries.region_id;
+		
+			外联接：		select regions.region_name, countries.country_name
+						from regions, countries
+						where regions.region_id(+) = countries.region_id;
+
+			笛卡尔：		select * from regions, countries;
+
+
+		5，SQL:1999语法
+			SELECT table1.column, table2.column
+			FROM table1
+			[NATURAL JOIN table2] |
+			[JOIN table2 USING (column_name)] |
+			[JOIN table2 ON (table1.column_name = table2.column_name)] |
+			[LEFT | RIGHT | FULL OUTER JOIN table2 ON (table1.column_name = table2.column_name)] |
+			[CROSS JOIN table2];
+		
+
+	12.1.2 N路联接和其他联接条件
+		使用联接可以关联的表的数量没有限制。
+			select r.region_name, c.country_name, l.city, d.department_name
+			from departments d natural join locations l natural join countries c natural join regions r;
+
+
+			select r.region_name, c.country_name, l.city, d.department_name
+			from departments d
+			join locations l using(location_id)
+			join countries c using(country_id)
+			join regions r using(region_id);
+			
+			select r.region_name, c.country_name, l.city, d.department_name
+			from departments d
+			join locations l on(l.location_id = d.location_id)
+			join countries c on(c.country_id = l.country_id)
+			join regions r on(r.region_id = c.region_id);
+			
+	12.1.3 非同等联接
+		依据不相等表达式匹配不同表中的列值。
+		SELECT table1.column, table.column
+		FROM table1
+		[join table2 ON (table1.expr1 < table2.expr2)] |
+		[join table2 ON (table1.expr1 > table2.expr2)] |
+		[join table2 ON (table1.expr1 <= table2.expr2)] |
+		[join table2 ON (table1.expr1 >= table2.expr2)] |
+		[join table2 ON (table1.expr1 BETWEEN table2.expr2 AND table2.expr3)] |
+		[join table2 ON (table1.expr1 LIKE table2.expr2)] |
+
+		
+		select e.job_id, e.salary, j.max_salary
+		from employees e join jobs j
+		on (e.salary < j.max_salary)
+		where e.salary > 5000
+		order by last_name;
+
+
+
+12.2 使用自联接将表联接到自身
+	select f1.name Dad, f2.name Child
+	from family f1 join family f2 on (f1.id = f2.father_id);
+	
+	
+12.3 使用外联接查看不满足联接条件的数据
+	12.3.1 内联接和外联接
+		内联接：返回匹配源表和目标表中的行。
+		外联接：返回内联接没有包含的行。
+		
+	12.3.2 左外联接
+		SELECT table1.column, table2,column
+		FROM table1
+		LEFT OUTER JOIN table2
+		ON (table1.column = table2.column);
+
+		依据ON关键字后指定的条件实现table1和table2之间的内联接，同时返回JOIN左边表中不满足联接条件的行。		
+
+	12.3.3 右外联接
+		SELECT table1.column, table2,column
+		FROM table1
+		RIGHT OUTER JOIN table2
+		ON (table1.column = table2.column);
+
+		依据ON关键字后指定的条件实现table1和table2之间的内联接，同时返回JOIN右边表中不满足联接条件的行。
+
+	12.3.4 全外联接
+		SELECT table1.column, table2,column
+		FROM table1
+		FULL OUTER JOIN table2
+		ON (table1.column = table2.column);
+
+		依据ON关键字后指定的条件实现table1和table2之间的内联接，同时返回两个表中不满足联接条件的行。
+
+
+
+12.4 生成两个或者多个表的笛卡尔乘积
+		SELECT table1.column, table2,column
+		FROM table1
+		CROSS JOIN table2;
+
+
+
+
+作成日：2015/10/13

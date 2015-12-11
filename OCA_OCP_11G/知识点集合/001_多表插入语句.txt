@@ -1,0 +1,132 @@
+多表插入语句分为4种：
+	①无条件INSERT
+	②有条件INSERT ALL
+	③有条件INSERT FIRST
+	④转置INSERT
+
+	创建测试表
+	create table emp(
+    		empno number(4),
+    		ename varchar2(10),
+    		job varchar2(9),
+    		deptno number(2)
+	);
+
+	插入数据
+	insert into emp values(7500,'A','SALESMAN',10);
+	insert into emp values(7501,'B','MANAGER',20);
+	insert into emp values(7502,'C','CLERK',30);
+	insert into emp values(7503,'D','CLERK',10);
+	insert into emp values(7504,'E','SALESMAN',20);
+	insert into emp values(7505,'F','MANAGER',30);
+
+	create table emp1 as select empno,ename,job from emp where 1=2;
+	create table emp2 as select empno,ename,deptno from emp where 1=2;
+
+①无条件INSERT
+	insert all into emp1(empno,ename,job) values(empno,ename,job)
+		   into emp2(empno,ename,deptno) values(empno,ename,deptno)
+	select empno,ename,job,deptno from emp where deptno=10;
+
+SQL> select * from emp1;
+
+     EMPNO ENAME      JOB
+---------- ---------- ---------
+      7500 A          SALESMAN
+      7503 D          CLERK
+
+SQL> select * from emp2;
+
+     EMPNO ENAME          DEPTNO
+---------- ---------- ----------
+      7500 A                  10
+      7503 D                  10
+
+	同时向两个表插入数据，且插入数据条数一样。
+
+②有条件INSERT ALL
+	delete emp1;
+	delete emp2;
+
+	insert all when job in ('SALESMAN', 'MANAGER') then
+		into emp1(empno,ename,job) values(empno,ename,job)
+		   when deptno in (10, 20) then
+		into emp2(empno,ename,deptno) values(empno,ename,deptno)
+	select empno,ename,job,deptno from emp;
+
+SQL> select * from emp1;
+
+     EMPNO ENAME      JOB
+---------- ---------- ---------
+      7500 A          SALESMAN
+      7501 B          MANAGER
+      7504 E          SALESMAN
+      7505 F          MANAGER
+
+SQL> select * from emp2;
+
+     EMPNO ENAME          DEPTNO
+---------- ---------- ----------
+      7500 A                  10
+      7501 B                  20
+      7503 D                  10
+      7504 E                  20
+
+	按条件向两个表插入数据。
+
+③有条件INSERT FIRST
+	delete emp1;
+	delete emp2;
+
+	insert first when job in ('SALESMAN', 'MANAGER') then
+		into emp1(empno,ename,job) values(empno,ename,job)
+		     when deptno in (10, 20) then
+		into emp2(empno,ename,deptno) values(empno,ename,deptno)
+	select empno,ename,job,deptno from emp;
+
+SQL> select * from emp1;
+
+     EMPNO ENAME      JOB
+---------- ---------- ---------
+      7500 A          SALESMAN
+      7501 B          MANAGER
+      7504 E          SALESMAN
+      7505 F          MANAGER
+
+SQL> select * from emp2;
+
+     EMPNO ENAME          DEPTNO
+---------- ---------- ----------
+      7503 D                  10
+
+	当第一个表符合条件后，第二个表将不再插入对应的行。即表emp2中不再有与表emp1相同的数据。
+
+
+④转置INSERT
+	创建测试表
+	create table t1(
+		c1 varchar2(10),
+		c2 varchar2(10)
+	);
+
+	create table t2 as select 'A' as d1, 'B' as d2, 'C' as d3 from dual;
+
+	insert all
+		into t1(c1, c2) values('1',d1)
+		into t1(c1, c2) values('2',d2)
+		into t1(c1, c2) values('3',d3)
+	      select d1,d2,d3 from t2;
+
+SQL> select * from t1;
+
+C1         C2
+---------- ----------
+1          A
+2          B
+3          C
+
+	把不同列的数据插入同一行。
+
+
+
+作成日：2015/10/16

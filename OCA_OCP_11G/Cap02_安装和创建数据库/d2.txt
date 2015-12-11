@@ -1,0 +1,30 @@
+2.2 规划Oracle数据库的安装
+	
+	OFA(Optimal Flexible Architecture):Oracle产品版本维护的文件系统目录结构。
+					核心是两个环境变量：ORACLE_BASE和ORACLE_HOME
+
+	ORACLE_BASE:
+		Linux/Unix标准：模块格式为/pm/h/u的目录，p:字符串常量，m:数字，h：标准目录名，u:系统帐号
+		Window标准： 从任何适当的驱动器号的根中开始的\oracle\app
+		
+	ORACLE_HOME:
+		Linux/Unix标准：$ORACLE_BASE/product/v/db_n  product是不变的产品，v是产品版本号，db_n是名称及增量编号
+		Window标准： 同上
+		
+	例如：
+		OS			ORACLE_BASE					ORACLE_HOME
+		Linux 		/u01/app/oracle				/u01/app/oracle/product/11.1.0/db_1
+		Window		D:\oracle\app				D:\oracle\app\product\11.1.0\db_1
+		
+	数据库本身的OFA位置:ORACLE_BASE/q/d,其中q是oradata,d是数据库名称。
+		名为orcl的数据库的位置：/u01/app/oracle/oradata/orc1
+	
+	控制文件，联机日志文件和数据文件的命名规定：
+		控制文件：   controlnn.ctl	 		nn是唯一编号			control01.ctl,control02.ctl
+		日志文件: redonn.log		 		nn是日志文件组编号	redo01.log,redo02.log
+		数据文件: tablespacenamenn.dbf	表空间名称和编号		system01.dbf,system02.dbf
+
+
+
+
+作成日：2015/9/23

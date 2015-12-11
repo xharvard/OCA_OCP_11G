@@ -1,0 +1,178 @@
+8.2	控制事务
+	8.2.1 数据库事务
+		Oracle确保事务完整性的机制是撤销段和重做日志文件的组合。
+		ACID测试：原子性，一致性，隔离性，持久性
+		原子性：规定一个事务的所有部分必须都完成或都不完成。
+		一致性：规定查询的结果必须与数据库在查询开始时的状态一致。
+		隔离性：规定对于其他部分来说，为完成的事务必须不可见。
+		持久性：规定一旦某个事务完成，数据库就不可能丢失这个事务。
+		
+	8.2.2 执行SQL语句
+		1，执行SELECT语句
+			步骤1：将SELECT语句从用户进程传输给服务器进程。服务器进程搜索数据库缓冲区，了解必须的块是否在内存中，
+				    如果在，进入步骤4；否则，进入步骤2.
+			步骤2：在数据文件中查找块。
+			步骤3：将查到的块复制到数据库缓冲区缓存中。
+			步骤4：将数据传输到服务器进程，做进一步的处理。
+			步骤5：将查询结果返回给用户进程。
+			
+		2，执行UPDATE语句
+			查询数据块与SELECT语句一样，接下来
+			1，必须在DML操作影响的所有记录以及相关索引键上放置锁，
+			2，生成重做（表的变更和撤销块的变更）
+			3，数据库缓冲区完成值的更新（使用变更后的列更新表数据库，未变更的列写入撤销段数据块）
+
+
+		3，执行INSERT和DELETE语句
+			同UPDATE基本一样。
+			
+	
+		4，事务的开始和结束（事务不可嵌套）
+			从发出DML命令开始，可能持续执行任意数量的DML命令，直到会话发出COMMIT或者ROLLBACK语句为止。
+			显式控制事务：COMMIT,ROLLBACK,SAVEPOINT。
+			隐式终止事务：发出DDL或DCL语句，退出用户工具（SQL*Plus等），客户会话终止，系统崩溃
+			
+			
+	8.2.3 事务控制：COMMIT,ROLLBACK,SAVEPOINT,SELECT FOR　UPDATE
+		1,COMMIT命令
+			执行COMMIT命令时，LGWR进程将日志缓冲区的内容刷新到磁盘，而DBWn进程不会进行任何操作。
+			重做日志流包含所有更改：应用于数据段和撤销段的更改。
+
+		2，ROLLBACK命令
+			ROLLBACK [TO SAVEPOINT savepoint];
+
+		3,SAVEPOINT命令
+			SAVEPOINT savepint;
+			在事务中设置一个标记，用来控制ROLLBACK命令的效果。
+
+		4,SELECT FOR　UPDATE
+			FOR UPDATE子句会锁定所有检索的行，其他会话都不能改变它们，但是可以查询。
+			只有发出COMMIT或者ROLLBACK命令才能解除锁定
+			
+			select * from regions where region_id = 5 for update;
+
+
+
+
+
+8.3	识别和管理PL/SQL对象
+	PL/SQL是Oracle专有的，在数据库内运行的第三代语言。
+	
+	8.3.1 存储的与匿名的PL/SQL程序块
+		-------------匿名的
+		declare increase nunber := 10;
+ 		begin
+ 		insert into t1 values (increase);
+ 		commit;
+ 		end;
+ 		/
+		
+		-------------存储的
+		create or replace procedure inc_v(increase number) as
+		begin
+		update t1 set v1=increase;
+		commit;
+		end;
+		/
+
+		execute inc_v(11);
+
+	
+	8.3.2 PL/SQL对象
+		6种常用的类型：过程，函数，程序包，程序包主体，触发器，类型主体（OCP考试范围外）。（存储在数据字典内的模式对象）
+		
+		1，过程，函数
+			过程(procedure)：可以传入参数：IN型，OUT型，IN-OUT型。可以在PL/SQL程序块内调用，也可以用EXECUTE命令调用。
+			函数(function)：没有OUT型参数，无法使用EXECUTE命令调用，通过RETURN语句返回一个值。
+			
+			函数能够完成的工作，过程同样可以。作为较小的代码块，函数通常用于较简单的操作。
+			过程通常用于将代码分割为若干模块，可以包含较长且复制的进程。
+			
+		2，程序包
+			将相关联的过程和函数集合在一起。
+			程序包由规范和主体两个对象组成。
+			
+			create table integers(c1 number, c2 varchar2(5));
+			
+			创建规范：CREATE PACKAGE
+				create or replace package numbers as
+					function odd_even(v1 number) return varchar2;
+					procedure ins_ints(v1 in number);
+				end numbers;
+				/
+
+			创建主体：CREATE PACKAGE　BODY
+				create or replace package body numbers as
+				
+				/* odd_even */
+				function odd_even(v1 number) return varchar2 as
+				begin
+					if mod(v1,2)=0 then return 'even';
+					else return 'odd';
+					end if;
+				end odd_even;
+				
+				/* ins_ints */
+				procedure ins_ints(v1 in number) as
+				begin
+					for i in 1..v1 loop
+					insert into integers values (i,odd_even(i));
+					end loop;
+				end ins_ints;
+				
+				end numbers;
+				/
+
+			调用包中的过程：用户需要拥有程序包上的EXECUTE权限。
+				exec numbers.ins_ints(5);
+
+
+		3，触发器
+			一种特殊的PL/SQL对象，无法手动调用。在完成某个特殊的动作或出现某种特殊情况时，自动运行。
+			常见触发事件：INSERT,UPDATE,DELETE, CREATE,ALTER,DROP,TRUNCATE,  SERVERERROR,LOGON,LOGOFF,STARTUP,SHUTDOWN, SUSPEND
+			广泛应用：审核用户动作，执行复杂的编辑，安全性，实施复杂的约束。
+
+
+
+8.4	监视和解决锁定冲突
+	8.4.1 共享锁和排他锁
+		排他锁(exclusive):在指定记录上请求排他锁的第一个会话会得到这个锁定，其他请求对该记录进行写访问的会话必须等待。
+		共享锁(shared)：共享锁被置于整个表上，同时许多会话可以获得同一个表上的共享锁。
+
+	8.4.2 排队机制
+		按请求顺序排队。
+		避免排队的方式:SELECT ... FOR UPDATE [WAIT <n>秒 | NOWAIT]
+
+
+	8.4.3 锁定争用
+		当某个会话请求一行或一个对象上的锁定，由于其他会话已经获取了该行或者对象上的排他锁而无法获得锁定时，这个会话
+		将被挂起，这种现象称为锁定争用。
+		
+	8.4.4 死锁
+		两个会话互相阻塞，同时被挂起，这种现象称为死锁。
+
+
+
+8.5	撤销概述
+	UNDO_MANAGEMENT参数设置。
+	select value from v$parameter where name='undo_management'; ---undo_management默认为AUTO
+	select value from v$parameter where name='undo_tablespace';
+	select tablespace_name from dba_tablespaces where contents='UNDO';
+
+
+8.6 事务与撤销数据
+	任何事务都无法跨多个撤销段，但一个撤销段可以支持多个事务。
+	
+
+
+8.7 创建和管理撤销表空间
+	CREATE UNDO TABLESPACE tablespace_name
+	DATAFILE datafile_name SIZE size [RETENTION NOGUARANTEE | GUARANTEE];
+
+	撤销表空间的大小估值：最高撤销生成速率和运行时间最长的查询两者考虑在内。
+
+
+
+	
+
+作成日：2015/10/9

@@ -1,0 +1,95 @@
+考试目标：
+	052.7.1     创建和管理数据库用户帐户
+	052.7.2     授予和撤销权限
+	052.7.3     创建和管理角色  
+	052.7.4     创建和管理配置文件
+	052.11.1   实现数据库安全和最小权限原则
+	052.11.2   使用标准数据库审核
+	
+6.1	创建和管理数据库用户帐户
+	6.1.1 用户帐户属性
+		用户名:以字母开头，包含数字，字母，$和_。长度不超过30个。
+		身份验证方法:
+			1.操作系统和口令文件身份验证：要使用该验证，必须为用户授予SYSDBA或SYSOPER权限
+				GRANT [sysdba | sysoper] TO username;
+				口令文件身份验证的连接语法： CONNECT username/password [@db_alias] AS [SYSDBA | SYSOPER];
+				操作系统身份验证的连接语法： CONNECT / AS [SYSDBA | SYSOPER];
+			2.口令身份验证： CONNECT username/password [@db_alias]
+				实例将针对数据字典中的用户帐户存储的口令，验证给定的口令。为此，数据库必须处于打开状态。
+				另外，11g版本，口令区分大小写。
+				更改口令语法： ALTER　USER username IDENTIFIED BY password;
+			3.外部身份验证：通过第三方外部服务验证。如Kerberos服务器，RADIUS服务器，Windows本地身份验证服务。
+			4.全局身份验证：使用LDAP服务器。在LDAP目录中定义的用户。
+				
+		默认表空间：可以在创建数据库时设置默认表空间，也可以用下面语法更改：
+				ALTER DATABASE DEFAULT TABLESPACE name;
+				如果创建数据库时未指定默认表空间，则将SYSTEM设置为默认表空间。
+		表空间配额:表空间中为用户的模式对象分配的空间量。如果配额用尽，将无法创建任何对象。
+		临时表空间：永久对象（如表）存储在永久表空间中，而临时对象存储在临时表空间中。需要临时表空间的操作包括：排序行，连接表，构建索引和使用临时表。
+				要更改用户的临时表空间，使用 ALTER USER username TEMPORARY　TABLESPACE tablespace_name;
+		用户配置文件:用户的配置文件控制口令设置，并在一定程度上控制资源的使用。
+		帐户状态：打开，锁定，过期，过期并锁定，正常过期，超时锁定，过期并超时锁定，正常过期并锁定，正常过期并超时锁定  九种状态。
+				锁定/解除帐户： ALTER USER username ACCOUNT LOCK / ALTER USER username ACCOUNT UNLOCK;
+				强制更改口令： ALTER USER username PASSWORD EXPIRE;
+
+	6.1.3  创建帐户
+		CREATE USER命令包含两个必须的参数：用户名和身份验证方法。
+			create user scott identified by tiger
+			default tablespace users 
+			temporary tablesapce temp
+			quota 100m on users, quota unlimited on example
+			profile developer_profile
+			password expire
+			account unlock;
+
+		修改帐户属性：
+		alter user scott identified by lion;
+		alter user scott default tablespace store_data temporary tablespace temp;
+		alter user scott quota unlimited on store_data, quota 0 on users;
+		alter user scott profile prod_profile;
+		alter user scott password expire;
+		alter user scott account lock;
+		
+		删除帐户：
+		drop user scott;(只有模式为空，才能成功)
+		drop user scott cascade;（不管模式是否为空，全部删除）
+
+
+
+6.2	授予和撤销权限
+	权限分：系统权限和对象权限。
+	
+	6.2.1 系统权限
+		约有200种。大多数应用于影响数据字典的操作。如创建表和用户。其他的影响数据库或实例，如创建表空间，调整实例参数值，或建立会话。
+		常用权限：CREATE SESSION :允许用户进行连接
+				RESTRICTED SESSION,ALTER DATABASE,ALTER SYSTEM,CREATE TABLESPACE,ALTER TABLESPACE,DROP TABLESPACE
+				CREATE TABLE,GRANT ANY OBJECT PRIVILIGE,CREATE ANY TABLE,DROP ANY TABLE,INSERT ANY TABLE,SELECT ANY TABLE
+
+		语法：GRANT privilege, [privilege...] TO username;
+			grant create session, alter session, create table, create view to scott;
+			
+			此语法的一个变体允许被授权人将权限传递给第三方：（with admin option）
+			conn system/oracle;
+			grant create table to scott with admin option;
+			conn scott/tiger;
+			grant create table to jon;
+		
+			系统权限的撤销不会级联。
+			ANY权限针对数据库中的所有相关对象给予权限，
+			grant select any table to scott;将允许scott查询数据库中每个模式中的每个表。（除了SYS模式）
+
+	6.2.2 对象权限
+		允许针对表和相关对象执行SELECT,INSERT,UPDATE,DELETE命令，也允许执行PL/SQL对象。
+		语法： GRANT privilege ON [schema.]object TO username [WITH GRANT OPTION];
+		grant select on store.customers to scott;
+		grant all on store.regions to scott;
+		
+		对象权限的撤销会级联。
+
+		权限回收： REVOKE privilege ON [schema.]object FROM username
+		revoke all on store.regions from scott;
+		
+	
+
+
+作成日：2015/9/28

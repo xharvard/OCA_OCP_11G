@@ -1,0 +1,215 @@
+6.3	创建和管理角色  
+	角色是一组系统权限或对象权限，可以作为一个单元来授予或撤销，可以在会话中临时激活或禁用已经授予的权限。
+	
+	6.3.1 创建角色并授予角色权限
+		语法：CREATE ROLE rolename;然后使用普通语法为角色授权。
+		
+		例如：HR模式用作三组员工使用：管理员有完全访问权限，高级职员有有限的访问权限，新职员有限制性很高的访问权限。
+		
+		1，创建新职员的角色：拥有此角色的任何人都能登陆到数据库，并对hr表运行select语句。
+			create role hr_junior;
+			grant create session to hr_junior;
+			grant select on hr.regions to hr_junior;
+			grant select on hr.jobs to hr_junior;
+			
+		2，创建高级职员的角色：将新职员权限授予该角色，并授予对表jobs的DML权限。
+			create role hr_senior;
+			grant hr_junior to hr_senior with admin option;
+			grant insert,update,delete on hr.jobs to hr_senior;
+			
+		3，创建管理员的角色：将高级职员权限授予该角色，并授予对表的所有对象权限。
+			create role hr_manager;
+			grant hr_senior to hr_manager with admin option;
+			grant all on hr.jobs to hr_manager;
+			grant all on hr.regions to hr_manager;
+		
+		with admin option与授予系统权限一样，不会级联。
+		
+		4，将角色授予相关员工。
+			grant hr_manager to manager;
+			grant hr_senior to capter;
+			grant hr_junior to developer1;
+			grant hr_junior to developer2;
+
+
+	6.3.2 预先定义的角色
+		至少有50个预定的角色。常用角色如下：
+		CONNCET,RESOURCE,DBA,SELECT_CATALOG_ROLE,SCHEDULER_ADMIN,
+		PUBLIC:该角色始终授予每个数据库用户帐户。如果某个权限授予了PUBLIC，该权限将授予所有用户。
+		grant select on hr.regions to public;表示所有用户将有权查询HR.REGIONS表。
+
+
+	6.3.3 启用角色
+		查询授予了什么角色：select * from dba_role_privs where grantee='SALES';
+		GRANTEE                        GRANTED_ROLE                   ADM DEF
+		------------------------------ ------------------------------ --- ---
+		SALES                          HR_JUNIOR                      NO  YES
+		
+		DEF为YES,表明是一个默认角色，每当连接时，将拥有此角色。
+		可以更改默认行为：alter user SALES default role none;
+		
+		select * from dba_role_privs where grantee='SALES';
+		GRANTEE                        GRANTED_ROLE                   ADM DEF
+		------------------------------ ------------------------------ --- ---
+		SALES                          HR_JUNIOR                      NO  NO
+		
+		
+		
+		SET ROLE rolename; 在会话中启用角色的基本命令。
+		另外可以通过运行PL/SQL来启用角色：CREATE ROLE　rolename IDENTIFIED USING prodedure_name;
+		
+	
+
+6.4 创建和管理配置文件
+	配置文件（profile)具有双重功能：实施口令策略并限制会话可以占用的资源。只有实例参数（RESOURCE_LIMIT)为TRUE时才实施资源限制。
+	
+	6.4.1 管理口令
+		口令限制：FAILED_LOGIN_ATTEMPTS,PASSWORD_LOCK_TIME,PASSWORD_LIFE_TIME,PASSWORD_GRACE_TIME,PASSWORD_REUSE_TIME,
+				PASSWORD_REUSE_MAX,PASSWORD_VERIFY_FUNCTION
+		
+	6.4.2 资源限制
+		资源限制：SESSION_PER_USER,CPU_PER_USER,CPU_PER_CALL,LOGICAL_READS_PER_SESSION,LOGIC_READS_PER_CALL,
+				PRIVATE_SGA,CONNECT_TIME,IDLE_TIME,COMPOSITE_LIMIT
+		
+		只有设置了实例参数，才会应用资源限制：
+		alter system set resource_limit=true;
+
+	6.4.3 配置文件的创建和分配
+		查询每个用户分配的配置文件：select username,profile from dba_users;
+		默认方式下，为所有用户分配名为DEFAULT的配置文件。
+		
+		显示配置文件的视图：select * from dba_profiles where profile='DEFAULT';
+
+		默认情况下的配置文件完全没有限制资源，只有一些口令限制。
+		启用更高级口令管理的最简单方式是运行oracle提供的脚本
+		unit/linux: $ORACLE_HOME/rdbms/admin/utlpwdmg.sql
+		windows:	%ORACLE_HOME%\rdbms\admin\utlpwdmg.sql
+		
+		上述脚本将创建两个名为VERIFY_	FUNCTION和VERIFY_FUNCTION_11G的函数，将default的验证函数改为VERIFY_FUNCTION_11G。
+		ALTER PROFILE DEFAULT LIMIT
+		PASSWORD_LIFE_TIME 180
+		PASSWORD_GRACE_TIME 7
+		......
+		PASSWORD_VERIFY_FUNCTION VERIFY_FUNCTION_11G;
+		
+		
+		创建配置文件：
+			create profile profilename limit
+			sessions_per_user unlimited
+			password_life_time 7
+			.... (上述的口令限制和资源限制参数)
+			;
+			
+		分配：
+			alter user username prifile profilename;
+			
+		调整实例参数：
+			alter syste set resource_limit=true;
+			
+		删除配置文件：
+			drop profile profilename [cascade];
+			如果加了cascade，将自动为profilename的所有用户重新分配DEFAULT配置文件。
+			
+	
+		
+6.5 数据库安全和最小权限原则
+	6.5.1 PUBLIC权限
+		隐式授予每个用户。默认方式下，PUBLIC用户拥有大量权限，尤其拥有许多PL/SQL的执行权限。
+		一般情况应该取消PUBLIC的UTL包的权限。
+		revoke execute on utl_file from public;
+		一些PUBLIC的不安全的包：UTL_FILE,UTL_TCP,UTL_SMTP,UTL_HTTP
+
+	6.5.2 对安全性至关重要的实例参数
+		静态参数：UTL_FILE_DIR,REMOTE_OS_AUTHENT,OS_AUTHENT_PREFIX(默认值：OPS$),O7_DICTIONARY_ACCESSIBILITY,
+				REMOTE_LOGIN_PASSWORDFILE,
+
+
+	练习：生成一个脚本，从PUBLIC删除一些危险的权限
+		spool clear_public_privs.sql
+		
+		select 'revoke execute on ' || table_name || ' from public;'
+		from dba_tab_privs where table_name like 'UTL_%';
+		
+		spool off;
+
+
+6.6 使用标准数据库审核
+	除了SYSDBA审核，oracle提供了三种审核技术：
+		数据库审核：能够跟踪特定权限的使用，特定命令的执行，对特定表的访问以及登陆尝试。
+		基于值的审核：使用了数据库触发器。在插入，更新或删除记录时，运行一个包括记录事件全部细节的PL/SQL代码块。
+		细粒度审核:允许根据所访问的记录来跟踪对表的访问。更为精确。并且可以生成审核记录。
+
+	6.6.1 审核SYSDBA活动
+		如果实例参数AUDIT_SYS_OPERATIONS设置为TRUE，那么作为SYSDBA或SYSOPER连接数据库的用户的所有操作都会被写入操作系统的审核跟踪，
+		从而能够给出DBA所进行操作的完整记录。
+		SYS审核记录的目标文件夹在windows系统中为Windows Application Log，在Unix系统中，由ADUIT_FILE_DEST参数控制。
+		
+	6.6.2 数据库审核
+		设置数据库审核之前，必须设置AUDIT_TRAIL这个参数。
+		参数具有的值：NONE,OS,DB,DB_EXTENDED,XML,XML_EXTENDED。
+		
+		DB审核，会将审核记录写入数据字典的SYS.AUD$表中。可以使用DBA_AUDIT_TRAIL视图查询；
+
+	6.6.3 使用触发器执行基于值的审核
+		CREATE OR REPLACE TRIGGER system.creditrating_audit
+		AFTER UPDATE OF creditrating ON store.customers
+		REFERENCING NEW AS NEW OLD AS OLD
+		FOR EACH ROW
+		BEGIN
+		IF :old.creditrating != :new.creditrating THEN
+		INSERT　INTO system.creditrating_audit
+		VALUES (sys_context('userenv','os_user'),sys_context('userenv','ip_address'),
+		:new.customer_id || ' credit rating changed from'
+		|| :old.creditrating || ' to ' || :new.creditrating);
+		END IF;
+		END;
+		/
+		与数据库审核相比，通过触发器审核是一个很缓慢的过程，不过能提供跟多的信息，允许实施复杂的业务规则。
+		
+	6.6.4 细粒度审核(FGA)
+		配置FGA涉及包DBMS_FGA。为了创建一个FGA审核策略，需要使用ADD_POLICY过程。	
+		相关视图：DBA_FGA_AUDIT_TRAIL,DBA_COMMON_AUDIT_TRAIL
+		
+		例：创建pol1策略，捕获读取HR.EMPLOYEES表SALARY列的所有SELECT语句(如果检索到的行至少有一个在部门80)。
+			execute dbms_fga.add_policy(object_schema=>'HR',object_name=>'EMPLOYEES',policy_name=>'POL1',
+			audit_condition=>'department_id=80',audit_column=>'SALARY');
+		
+		注：DBA_AUDIT_TRAIL显示标准数据库审核，DBA_FGA_AUDIT_TRAIL显示GFA,DBA_COMMON_AUDIT_TRAIL则两者都显示。
+		
+		
+
+练习：（使用标准数据库审核）
+	1，以system用户创建用户和表
+		create user auditor identified by oracle;
+		create table system.audi as select * from all_users;
+		grant create session,select any table to auditor;
+		grant select on audi to auditor;
+
+	2，启用对auditor使用select any privilege的审核，以及对表audi的所有访问的审核
+		audit select any table by access;
+ 		audit all on system.audi by access;
+
+	3，修改实例参数，并重启
+		alter system set audit_trail='DB_EXTENDED' scope=spfile;
+		alter system set audit_sys_operations=true scope=spfile;
+		startup force;
+	
+	4,以SYS连接，将审核所有语句：select count(*) from system.audi;
+		如果是linux：查询AUDIT_FILE_DEST参数来确定审核文件位置
+		如果是Window:在Event Viewer中打开Application Log
+		
+	5，以auditor连接，运行以下查询
+		select count(*) from system.audi;
+		select count(*) from system.product_user_profile;
+
+	6.以system连接，查看审核事件
+		select sql_text,priv_used,action_name from dba_audit_trail where username='AUDITOR';
+
+			SQL_TEXT                                 	PRIV_USED            	ACTION_NAME
+	---------------------------------------- 			--------------------	-----------
+	select count(*) from system.audi                              				SELECT
+	select count(*) from system.product_user_profile	SELECT ANY TABLE     	SELECT
+
+
+
+作成日：2015/9/29

@@ -1,0 +1,143 @@
+5.2	创建和管理表空间
+	表空间是模式数据库的仓库，包括数据字典。所有数据库都必须有SYSTEM表空间和SYSAUX表空间，在实际中，还有临时表空间和撤销表空间。
+	
+	5.2.1 创建表空间
+		CREATE TABLESPACE storetabs DATAFILE
+		'D:\app\haihua.xu\oradata\ocp11g\storetabs_01.dbf' SIZE 50M,
+		'D:\app\haihua.xu\oradata\ocp11g\storetabs_02.dbf' SIZE 50M
+		EXTENT MANAGEMENT LOCAL UNIFORM SIZE 5M;
+
+		查询表空间是否是bigfile表空间：
+		SELECT T.NAME TABLESPACE_NAME, T.BIGFILE, D.NAME DATAFILE_NAME, D.BYTES/1024/1024 MB
+		FROM V$TABLESPACE T JOIN V$DATAFILE D USING (TS#)
+		WHERE T.NAME='STORETABS';
+		SMALLFILE表空间可以有多个数据文件，而BIGFILE表空间只能有一个数据文件。
+		表空间可以存储三种对象：永久对象，临时对象，撤销段。
+	
+		查询TEMP表空间，此表空间用来存储临时对象。
+		数据表空间：V$DATAFILE,DBA_DATA_FILES
+		临时表空间：V$TEMPFILE,DBA_TEMP_FILES
+		SELECT　T.NAME TABLESPACE_NAME, D.NAME DATAFILE_NAME, D.BYTES/1024/1024 SIZE_MB, D.CREATE_BYTES/1024/1024 CREATE_SIZE_MB
+		FROM V$TABLESPACE T JOIN V$TEMPFILE D USING (TS#)
+		WHERE T.NAME='TEMP';
+
+	5.2.2 更改表空间
+		包括：重命名，使其联机或脱机，读写或只读，重调大小，更改警报阀值
+		
+		1，重命名
+			ALTER TABLESPACE oldname RENAME TO newname;
+			后面还需要将数据文件重命名。
+			
+			例：将5.2.1创建的表空间重命名为STOREDATA
+			1.1 ALTER TABLESPACE STORETABS RENAME　TO STOREDATA;
+			1.2 SELECT NAME DATAFILE, STATUS FROM V$DATAFILE WHERE NAME LIKE '%STORETAB%';
+				DATAFILE											STATUS
+				D:\APP\HAIHUA.XU\ORADATA\OCP11G\STORETABS_01.DBF	ONLINE
+				D:\APP\HAIHUA.XU\ORADATA\OCP11G\STORETABS_02.DBF	ONLINE
+			1.3 ALTER TABLESPACE STOREDATA OFFLINE;(表空间脱机)
+			1.4 SELECT NAME DATAFILE, STATUS FROM V$DATAFILE WHERE NAME LIKE '%STORETAB%';
+				DATAFILE											STATUS
+				D:\APP\HAIHUA.XU\ORADATA\OCP11G\STORETABS_01.DBF	OFFLINE
+				D:\APP\HAIHUA.XU\ORADATA\OCP11G\STORETABS_02.DBF	OFFLINE
+			1.5 HOST RENAME D:\APP\HAIHUA.XU\ORADATA\OCP11G\STORETABS_01.DBF STOREDATA_01.DBF;
+				HOST RENAME D:\APP\HAIHUA.XU\ORADATA\OCP11G\STORETABS_02.DBF STOREDATA_02.DBF;
+				用操作系统的命令重命名文件
+			1.6	SELECT T.NAME TABLESPACE_NAME, D.NAME DATAFILE_NAME FROM V$TABLESPACE T JOIN V$DATAFILE D USING (TS#) WHERE T.NAME='STOREDATA';
+				查询表空间与数据文件的对应关系，目前还是修改前的名字
+				TABLESPACE_NAME		DATAFILE_NAME
+				STOREDATA			D:\APP\HAIHUA.XU\ORADATA\OCP11G\STORETABS_01.DBF
+				STOREDATA			D:\APP\HAIHUA.XU\ORADATA\OCP11G\STORETABS_02.DBF	
+			1.7 修改控制文件的对应关系
+				ALTER DATABASE RENAME FILE 'D:\APP\HAIHUA.XU\ORADATA\OCP11G\STORETABS_01.DBF' TO 'D:\APP\HAIHUA.XU\ORADATA\OCP11G\STOREDATA_01.DBF';
+				ALTER DATABASE RENAME FILE 'D:\APP\HAIHUA.XU\ORADATA\OCP11G\STORETABS_02.DBF' TO 'D:\APP\HAIHUA.XU\ORADATA\OCP11G\STOREDATA_02.DBF';
+			1.8 ALTER TABLESPACE STOREDATA ONLINE;
+			1.9 SELECT T.NAME TABLESPACE_NAME, D.NAME DATAFILE_NAME, D.STATUS FROM V$TABLESPACE T JOIN V$DATAFILE D USING (TS#) WHERE T.NAME='STOREDATA';
+				TABLESPACE_NAME		DATAFILE_NAME										STATUS
+				STOREDATA			D:\APP\HAIHUA.XU\ORADATA\OCP11G\STOREDATA_01.DBF	ONLINE
+				STOREDATA			D:\APP\HAIHUA.XU\ORADATA\OCP11G\STOREDATA_02.DBF	ONLINE
+
+
+		2，使其联机或脱机
+			ALTER TABLESPACE name OFFLINE [NORMAL|IMMEDIATE|TEMPORARY]	NORMAL是默认。
+				NORMAL：强制实施针对所有表空间数据文件的检查点。将数据库缓冲区数据写入数据文件后，将表空间和数据文件脱机。
+				IMMEDIATE：立即使表空间和数据文件脱机，不会转储脏缓冲区。数据文件将受损，再重新联机前，必须进行恢复。
+				TEMPORARY：针对所有可以执行检查点操作的所有文件实施检查点，然后按顺序使表空间及文件脱机。任何受损的文件将立即脱机。
+				
+		3，标记为只读
+				ALTER TABLESPACE name [READ ONLY | READ WIRTE];
+			将表空间标记为只读后，将不能使用DML语句来更改其中的任何对象。但是，可以删除它们。
+
+		4，重调大小
+			可以向其添加数据文件，也可以调整现有数据文件的大小。如果创建文件时使用AUTOEXTEND语法，则可以自动向上调整文件大小。
+			否则，只能使用如下命令手动更改：
+			ALTER DATABASE DATAFILE filename　RESIZE n[M|G|T];
+			
+			alter database datafile 'D:\APP\HAIHUA.XU\ORADATA\OCP11G\STOREDATA_01.DBF' resize 10m;
+			不能通过语法判断将文件变大还是变小。
+			只有文件系统空间足够，向上重调大小才能成功；只有文件中的空间尚未分配给段的区间使用，才能向下重调大小。
+			
+			向表空间添加数据文件，语法如下：
+			ALTER TABLESPACE storedata ADD DATAFILE 'D:\APP\HAIHUA.XU\ORADATA\OCP11G\STOREDATA_03.DBF' SIZE 50M;
+			若要自动扩展，可以追加： AUTOEXTEND ON NEXT 50M MAXSIZE 2G。
+			
+		5， 更改警报阀值
+			Database Control的阀值管理
+			默认阀值：表空间满度超过85%，将发出警告警报；如果超过97%，将发出严重警报。
+			
+	5.2.3  删除表空间
+		DROP TABLESPACE name [INCLUDING CONTENTS [AND DATAFILES] ];
+		
+			
+	5.2.4 OMF(Oracle-Managed Files):Oracle管理的文件	
+		相关实例参数：
+			DB_CREATE_FILE_DEST
+			DB_CREATE_ONLINE_LOG_DEST_1
+			DB_CREATE_ONLINE_LOG_DEST_2
+			DB_CREATE_ONLINE_LOG_DEST_3
+			DB_CREATE_ONLINE_LOG_DEST_4
+			DB_CREATE_ONLINE_LOG_DEST_5
+			DB_RECOVERY_FILE_DEST
+			
+		例： create tablespace omftbs;数据文件位置和名字将根据DB_CREATE_FILE_DEST自动生成。	
+			
+		普通create语句生成的数据文件默认是不能自动扩展的，
+		而OMF生成的则可以自动扩展，并且没有扩展上限。
+		
+
+5.3	管理表空间中的空间
+	空间管理在多个级别进行。第一，将空间分配给表空间，通过设置数据文件大小来完成。第二，将表空间中的空间分配给段，通过分配区间来完成。
+	第三，将段中的空间分配给行，通过位图来完成。	
+			
+	5.3.1 区间管理
+		为每个表空间设置，应用于表空间中的所有段。
+		两种技术来管理区间的使用：字典管理和本地管理（始终使用）。
+		字典管理：在数据字典中使用两个表。SYS.UET$描述以用的区间的行，而SYS.FET$描述可用区间的行。
+		本地管理：在每个数据文件中存储位图，位图中的每个位覆盖一个块的范围。
+		创建本地管理的表空间时，一个重要的选项uniform size。规定了表空间中分配的每个区间的大小。
+		
+		create tablespace large_tabs datafile '...\large_tabs_01.dbf' size 10g extent management local uniform size 160m;
+		分配表空间的每个区间为160M,故将有64个。位图只需要64位空间。对于表空间中段很大的情况十分有效。
+		而对于小对象则可以指定小的区间分配大小。
+		create tablespace small_tabs datafile '...\small_tabs_01.dbf' size 1g extent management local uniform size 160k;
+		
+		Oracle公司建议使用autoallocate，除非知道自己段的大小，否则用推荐的即可。
+		create tablespace any_tabs datafile '...\any_tabs_01.dbf' size 10g extent management local autoallocate;
+		
+		如果数据库从先前版本升级而来，可能包括字典管理的表空间，可以先查询确定，然后用PL/SQL程序转换。
+		1，select tablespace_name, extent_management from dba_tablespaces;
+		2,execute dbms_space_admin.tablespace_migragte_to_local('tablespacename');（SYSTEM表空间除外，其还需要其他附加步骤）
+		
+
+	5.3.2 管理段空间
+		为每个表空间设置，应用于表空间中的所有段。
+		两种技术来管理段空间的使用：手动和自动（始终使用）。
+		以自动管理表空间方式创建的每个段都有一组位图，位图描述每个块的满度。
+		
+		查看表空间是否在使用手动管理：
+		select tablespace_name, segment_space_management from dba_tablespaces;
+		无法将表空间从手动空间管理转换到自动空间管理。
+		
+		
+				
+	
+作成日：2015/9/28

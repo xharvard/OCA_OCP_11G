@@ -1,0 +1,132 @@
+3.2 描述启动和关闭数据库时的多个阶段
+	Oracle的建议：先启动Database Control，然后启动数据库侦听器，最后启动数据库。
+	
+3.2.1 Database Control的启动和连接
+	与Database Control工具通信通过HTTPS完成。
+	启动：emctl start dbconsole
+	停止：emctl stop dbconsole
+	检查：emctl status dbconsole
+	
+	emctl的配置文件：
+		通用文件：ORACLE_HOME/sysman/config目录
+		特定文件：ORACLE_HOME/hostname_ sid/sysman/config目录和ORACLE_HOME/oc4j/j2ee目录
+		
+	如果是window系统的话，会注册OracleDBConsole{ORACLE_SID}的服务
+	浏览器连接方式：https://hostname:port/em
+	例如：https://localhost:5500/em
+
+3.2.2 启动数据库侦听
+	数据库侦听器是一个进程，监视一个端口的数据库连接请求。使用Oracle Net协议。
+	
+	三种启动方式：
+		1，使用lsnrctl程序
+			lsnrctl start [listener]
+			lsnrctl status [listener]
+			listener是监听器的名称，默认为LISTENER。
+		2，使用Database Control
+		3,使用一项windows服务启动（仅限window系统）
+	
+	
+3.2.3 启动SQL*Plus
+	sqlplus命令
+	
+3.2.4 启动和关闭数据库
+	1，连接
+		普通用户：connect user/pwd[@connect_alias]
+		外部口令文件用户：connect user/pwd/[@connect_alias] as sysdba/sysoper
+		操作系统身份验证：connect / as sysdba/sysoper
+		
+	2，SYSOPER和SYSDBA（权限）
+		SYSOPER有权发出的命令：STARTUP,SHUTDOWN,ALTER DATABASE [MOUNT|OPEN|CLOSE|DISMOUNT],
+				ALTER [DATABASE|TABLESPACE] [BEGIN|END] BACKUP, RECOVER
+		
+		SYSDBA具有SYSOPER的所有权限，并且可以创建数据库，执行不完全恢复，创建其他SYSOPER用户和SYSDBA用户。
+		SYS用户具有SYSDAB和SYSOPER权限。
+		
+	3，启动：NOMOUNT,MOUNT,OPEN
+		STARTUP用来启动数据库。
+		NOMOUNT:搜索参数文件。该模式只使用参数文件和警报日志。
+				搜索顺序：{ORACLE_HOME}\database\SPFILESID.ORA -> SPFILE.ORA -> INITSID.ORA
+				spfile是二进制文件，不可手动更改。必须先手动编辑initSID.ora文件，然后通过create spfile
+				生成spfile。
+				
+				警报日志位于BACKGROUND_DUMP_DEST参数所指定的位置，可在参数文件中找到它。
+				或者用命令查询： show parameter background_dump_dest
+						或者 select name,value from v$parameter where name='background_dump_dest';
+				
+		MOUNT：通过CONTROL_FILES参数读取控制文件，加载数据库。
+		
+		OPEN:加载数据文件和日志文件，打开数据库。
+		
+	4，关闭：NORMAL,TRANSACTIONAL,IMMEDIATE,ABORT
+		关闭的顺序与启动相反。首先关闭数据库，然后卸载，最后停止实例。
+		
+		SHUTDOWN命令用来关闭数据库
+			shutdown [normal|transactional|immediate|abort]
+			normal（干净的）:默认选项，不许可新的用户连接，允许当前的所有连接继续。只有所有用户退出登陆，数据库才真正关闭。
+					一般是没有意义的，只要有用户没有退出，就无法关闭。
+			transactional（有序的）:不许可新的用户连接，允许当前位于某个事务中的会话在事务结束后终止。所有会话终止，关闭数据库。
+			immediate（一致的）:不许可新的用户连接，所有连接的会话被终止，活动中的事务被回滚，关闭数据库。
+			abort（无序的）:相当于断电。实例立刻终止。数据库处于不一致状态。下次启动时需恢复。
+			
+		
+练习：
+	1，检查数据库监听器
+		lsnrctl status
+		lsnrctl start
+	2,检查Database Control控制台
+		emctl status dbconsole
+		emctl start dbconsole
+	3,使用/nolog开启SQL*Plus
+		sqlplus /nolog
+	4,用操作系统身份验证，以SYS用户连接数据库
+		conn / as sysdba
+	5,只启动实例，查询v$instance视图检查状态
+		startup nomount;
+		select status from v$instance;  -> status:started
+	6,加载数据库，查询v$instance视图检查状态
+		alter database mount;
+		select status from v$instance;  -> status:mounted
+	7,打开数据库，查询v$instance视图检查状态
+		alter database open;
+		select status from v$instance;  -> status:open
+	8,关闭数据库
+		shoudown immediate;
+		
+3.3 使用警报日志和跟踪文件
+	警报日志是应用于实例和数据库的关键操作的连续记录。位置由BACKGROUND_DUMP_DEST参数确定，名为alert_SID.log。
+	跟踪文件由后台各个进程生成，一般在遇到错误时生成。与警报日志放在一起。
+	
+	
+3.4 使用数据字典和动态性能视图
+	3.4.1 数据字典视图
+		数据字典是元数据，即数据的数据。从物理上和逻辑上描述数据库及其内容。在SYSTEM和SYSAUX表空间以一组段的形式存储。
+		数据字典晦涩难懂，Oracle提供了一组便于理解的视图。这些视图有3种格式：DBA_,ALL_,USER_。
+		
+		USER_:描述查询视图的用户拥有的对象。
+		ALL_:描述查询视图的用户有权访问的对象及拥有的对象。
+		DBA_:描述数据库中的所有对象。
+
+		DBA常用的一些视图：
+			DBA_OBJECTS:数据库种每个对象的行
+			DBA_DATA_FILES:描述每个数据文件的行
+			DBA_USERS:描述每个用户的行
+			DBA_TABLES:描述每个表的行
+			DBA_ALERT_HISTORY:描述过去的警报条件的行
+			
+		例如：select object_name,owner,object_type from dba_objects where object_name='DBA_OBJECTS';
+		SQL*Plus中可以用desc命令查看表结构
+			desc dba_objects;
+	
+	3.4.2 动态性能视图
+		数量有300多个，名称前缀为"V$"。事实上，其根本不是视图，而是带有"V_$"前缀的视图上的同义词。
+		通过动态视图，可以查看有关实例的大量信息，也可以查看数据库的大量信息。
+		
+		根据实例填充的动态性能视图：V$INSTANCE,V$SYSSTAT等，即使实例处于NOMOUNT模式，也可用。
+		根据控制文件填充的动态性能视图：V$DATABASE，V$DATAFILE等，在加载了数据库的情况下可以查询。
+		数据字典视图只运行在打开数据库以及数据字典后才可以查询。
+		
+		例如：select * from v$sql; 查询存储在共享池中的每条SQL语句都对应一行。
+			
+		
+作成日：2015/9/24

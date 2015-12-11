@@ -1,0 +1,106 @@
+9.3 执行基本的SELECT语句
+	9.3.1 基本语法
+		SELECT * | {[DISTINCT] column | expression [alias], ...}
+		FROM table
+
+		注：DISTINCT是从查询的列的组合中删除重复值。
+		别名：  AS
+		串联： ||
+		DUAL表：测试复杂表达式或者运算。  select 3*7+52 from dual;
+		可选择引用运算符：
+			语法：q' delimiter character  （delimiter表示任意字符或括号）
+				 q'<       任意带’的字符串             >'
+				 q'A       任意带’的字符串             A'
+			SELECT q'<Plursl's can also be>' AS "q<>" FROM DUAL;
+			等同于SELECT 'Plursl''s can also be' AS "''" FROM DUAL;
+
+			SELECT q'XWhat about UPPER CASE X for plural'sX' AS "qX" FROM　DUAL;
+
+
+
+9.4 限制查询检索的行
+	9.4.1 WHERE子句
+		SELECT * | {[DISTINCT] column | expression [alias], ...}
+		FROM table
+		[WHERE condition(s)];
+
+	9.4.2 比较运算符
+		=,<,>,<=,>=,<>,!=
+		between A and B 等同于  A<=?<=B
+		in 集合  例:column in (1000,2000,3000)
+		like  两个通配符： %指定零个或多个通配符字符，_指定一个通配符字符。
+			例： where xxx like 'A%'; // 以字母"A"开头的字符串
+			    where xxx like '%'; // 非空（NULL）的字符串
+			   转义字符：escape 
+			     where xxx like 'SA\_%' escape '\'; // 以SA_开头的字符串
+			  等同 where xxx like 'SA$_%' escape '$'; // 以SA_开头的字符串 
+
+		is null / is not null
+		
+	9.4.3 布尔运算符
+		and,or,not
+
+9.5	排序查询检索的行
+	ORDER BY子句总是SELECT语句的最后一个子句。
+	
+	SELECT * | {[DISTINCT] column | expression [alias], ...}
+	FROM table
+	[WHERE condition(s)]
+	[ORDER BY {clo(s) | expr | numeric_pos} [ASC | DESC] [NULLS FIRST|LAST]];
+	
+	默认选项:ASC,如果出现空值，在升序排列时默认为NULLS LAST,降序排列时默认为NULLS FIRST。
+	numeric_pos：位置排序，只适用于SELECT列表中的列。
+		select last_name,hire_date,salary from employees order by 2; //按hire_date升序
+
+	混合排序：select job_id,last_name,salary,hire_date from employees
+			where job_id in ('sa','sb')
+			order by job_id desc, last_name, 3 desc;// 首先job_id降序，last_name升序，salary降序
+
+
+
+
+9.6	&符号替换
+	select employee_id,last_name from employees where last_name = &LASTNAME;
+	会提示输入LASTNAME对应的值。
+
+	双符号&&替换：
+		select first_name,last_name 
+		from employees 
+		where last_name like '%&&SEARCH%' and first_name like '%&SEARCH%';
+		第一次输入SEARCH后，会将其存入会话变量，后面的SEARCH会自动被赋于相同的值。
+	
+	替换列名：
+		select first_name,job_id, &&col
+		from employees
+		where job_id in ('sa','sb')
+		order by &col;
+		
+	替换表达式和文本:
+		select &rest_of_statement;
+
+
+	定义和验证：&&替换，会将变量保存为会话变量，后面出现时自动解析。
+		1，DEFINE和UNDEFINE命令：
+			可以用UNDEFINE来解除定义。
+			UNDEFINE variable;
+			
+			用DEFINE定义变量：
+			DEFINE variable=value;
+			DEFINE  // 查询所有变量定义
+			
+		SET DEFINE ON|OFF :确定&替换在会话中是否可用。
+		
+		例：  1，select 'Coda & Sid' from dual; // 会提示输入& Sid的值。
+		
+			2，set define off
+			  select 'Coda & Sid' from dual; // 不会有任何提示。
+			  set define on
+			
+			
+		2，VERIFY命令：控制提交的替换变量是否显示到屏幕上。
+		SET VERIFY ON|OFF
+				
+
+
+
+作成日：2015/10/10

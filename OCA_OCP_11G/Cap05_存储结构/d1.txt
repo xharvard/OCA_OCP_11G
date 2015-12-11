@@ -1,0 +1,57 @@
+考试目标：
+	052.6.1  了解表空间和数据文件
+	052.6.2   创建和管理表空间
+	052.6.3  管理表空间中的空间  
+
+
+5.1	了解表空间和数据文件
+	从逻辑上讲，数据存储在段（通常是表）中；从物理上讲，数据存储在数据文件中。表空间实体是两者的抽象，一个表空间可能包含
+	多个段，并由多个数据文件组成。段和数据文件没有直接关系。
+	
+	逻辑视图				  物理视图
+	表空间    ------------  数据文件
+	  |						|
+	    段						|
+	  |						|
+	  区间					|
+	  |						|
+	Oracle 块 ------------ 操作系统块
+
+	段，区间，块，行：
+		数据存储在段中。数据字典视图DBA_SEGMENTS描述数据库中的每个段。
+		select segment_type,count(1) from dba_segments group by segment_type order by segment_type;
+		
+		SEGMENT_TYPE         COUNT(1)
+		------------------ ----------
+		CLUSTER                    10
+		INDEX                    2221
+		INDEX PARTITION           104
+		LOB PARTITION               1
+		LOBINDEX                  686
+		LOBSEGMENT                686
+		NESTED TABLE               28
+		ROLLBACK                    1
+		TABLE                    1552
+		TABLE PARTITION            88
+		TYPE2 UNDO                 10
+		共有11种。
+
+		每个段都有一个或多个区间。
+
+	文件存储技术：
+		数据文件可以保存在四类设备上：本地文件系统，群集文件系统，原始设备，ASM磁盘组。
+		
+练习：（SYSTEM）
+	确定控制文件的名称和大小：
+	select name,block_size*file_size_blks bytes from v$controlfile;
+
+	确定联机重做日志文件成员的名称和大小：
+	select member,bytes from v$log join v$logfile using (group#);
+	
+	确定数据文件和临时文件的名称和大小：
+	select name,bytes from v$datafile
+	union all
+	select name,bytes from v$tempfile;
+
+
+作成日：2015/9/25

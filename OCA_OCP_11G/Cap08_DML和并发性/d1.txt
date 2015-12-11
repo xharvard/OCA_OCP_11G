@@ -1,0 +1,49 @@
+考试目标：
+	051.9.1	描述各种数据操作语言（DML)语句
+	051.9.2	在表中插入行
+	051.9.3	更新表中的行
+	051.9.4	从表中删除行
+	051.9.5	控制事务
+	052.9.1	使用DML管理数据
+	052.9.2	识别和管理PL/SQL对象
+	052.9.3	监视和解决锁定冲突
+	052.10.1 解释撤销的作用
+	052.10.2 了解事务的撤销生成方式
+	052.10.3 管理撤销
+	
+
+8.1	数据操作语言(DML)语句
+	5种DML命令：SELECT,INSERT,UPDATE,DELETE,MERGE	
+
+	8.1.1 INSERT
+		可以插入一行，或者插入由select语句创建的行集合。
+		INSERT INTO table [(column [,column...])] VALUES (value [,value]);
+		INSERT INTO table [(column [,column...])] subquery;
+
+	8.1.2 UPDATE
+		UPDATE table SET column=value [,column=value...] [WHERE condition];
+		
+	8.1.3 DELETE
+		DELETE FROM table [WHERE condition];
+		
+	8.1.4 TRUNCATE(DDL命令)
+		全表删除，执行速度比DELETE快。不可回滚。
+		TRUNCATE TABLE table;
+
+	8.1.5 MERGE(完全可以使用INSERT,UPDATE,DELETE语句组合完成）
+		OCP考试范围外。了解而已。
+		
+		使用new_employees的内容在employee中更新或者插入行。
+		merge into employee e using new_employees n
+			on (e.employee_id = n.employee_id)
+		when matched then
+			update set e.salary=n.salary
+		when not matched then
+			insert (employee_id,last_name,salary)
+			values (n.employee_id,n.last_name,n.salary);
+		
+		
+
+	
+
+作成日：2015/10/8

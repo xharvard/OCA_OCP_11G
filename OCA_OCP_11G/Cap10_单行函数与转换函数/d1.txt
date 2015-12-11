@@ -1,0 +1,92 @@
+考试目标：
+	051.3.1	描述SQL中可用的各种类型的函数
+	051.3.2	在SELECT语句中使用字符，数字和日期函数
+	051.4.1	描述SQL中可用的各种类型的转换函数
+	051.4.2	使用TO_CHAR,TO_NUMBER和TO_DATE转换函数
+	051.4.3	在SELECT语句中应用条件表达式
+	
+
+10.1 描述和使用字符，数字和日期函数
+	函数类型：单行函数和多行函数
+	
+	1,LOWER(s):转换为小写字符
+		select lower(100+100), lower('SQL'), lower(sysdate) from dual;
+		
+		LOWER(100+100) LOWER('SQL') LOWER(SYSDATE) 
+		-------------- ------------ -------------- 
+		200            sql          15-10-10     
+
+	2,UPPER(s):转换为大写字符
+
+	3,INITCAP(s):转换为首字母大写的形式
+		select initcap('init cap or init_cap or init%cap') from dual;
+
+		INITCAP('INITCAPORINIT_CAPORINIT%CAP') 
+		-------------------------------------- 
+		Init Cap Or Init_Cap Or Init%Cap  
+
+
+	4,CONCAT(s1,s2):连接s1和s2生成新的字符串
+		select concat('Today is: ',sysdate) from dual;
+
+		CONCAT('TODAYIS:',SYSDATE) 
+		-------------------------- 
+		Today is: 15-10-10     
+
+		连接多个字符串：
+		select concat('outer1 ', concat('inner1 ', 'inner2')) from dual;
+
+	5,LENGTH(s):返回字符串的长度
+		select length('12345') from dual;
+
+	6,LPAD(s,n,p)和RPAD(s,n,p):左/右填充
+		s:源字符串
+		n:返回字符串的最终长度
+		p:用于填充的字符串
+		
+		select rpad('hello',8,'*') from dual;   // hello***
+		select rpad('hello',8) from dual;  		// hello(3空格)		
+		select rpad('hello',3) from dual;  	 	// hel
+
+	7,TRIM([trailing|leading|both] trimstring from s):从字符值s的开头或者结尾删除一些字符
+		trim(s):删除s两边的空格
+		trim(trailing trimstring from s):从字符串s的结尾删除所有的trimstring
+		trim(leading  trimstring from s):从字符串s的开头删除所有的trimstring
+		trim(both	  trimstring from s):从字符串s的两边删除所有的trimstring
+
+		select trim(both     '*' from '****Hello****'),
+			   trim(leading  '*' from '****Hello****'),
+			   trim(trailing '*' from '****Hello****')
+		from dual;
+
+		TRIM(BOTH'*'FROM'****HELLO****') TRIM(LEADING'*'FROM'****HELLO****') TRIM(TRAILING'*'FROM'****HELLO****') 
+		-------------------------------- ----------------------------------- ------------------------------------ 
+		Hello                            Hello****                           ****Hello                            
+
+	8,INSTR(In-String):确定搜索字符串在给定字符串内的位置，返回数字位置。如果不存在，返回0。
+		INSTR(source string, search string, [search start position], [nth occurrence])
+			search start position（开始搜索位置）默认为1，nth occurrence（第几次出现）默认为1。
+			
+		select instr('1#3#5#7#9#', '*') from dual; 			// 0
+		select instr('1#3#5#7#9#', '#') from dual; 			// 2
+		select instr('1#3#5#7#9#', '#', 5) from dual; 		// 6
+		select instr('1#3#5#7#9#', '#', 3, 4) from dual; 	// 10
+
+	9,SUBSTR(Substring):从给定源字符串中给定位置开始，提取指定长度的子字符串。
+						如果其实位置大于源字符串的长度，返回NULL。
+		SUBSTR(source string, start position, [number of characters to extract])				
+		
+		select substr('1#3#5#7#9#', 5) from dual;		// 5#7#9#
+		select substr('1#3#5#7#9#', 5, 3) from dual;	// 5#7
+		select substr('1#3#5#7#9#', -3, 2) from dual;	// #9 (负数表示从后往前)
+
+	10,REPLACE:替换源字符串中出现的所有搜索项。
+		REPLACE(source string, search item, [replacement term])
+		
+		select replace('1#3#5#7#9#', '#', '->') from dual;	// 1->3->5->7->9->
+		select replace('1#3#5#7#9#', '#') from dual;		// 13579
+
+
+
+
+作成日：2015/10/10

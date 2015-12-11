@@ -1,0 +1,31 @@
+考试目标：
+	052.4.1  设置数据库初始化参数
+	052.4.2  描述启动和关闭数据库时的多个阶段
+	052.4.3  使用警报日志和跟踪文件
+	052.4.4  使用数据字典和动态性能视图
+	
+3.1 设置数据库初始化参数
+	分为静态参数(pfile)和动态参数（spfile）
+	
+	v$parameter视图显示当且在运行实例中生效的参数值。
+	v$spparameter视图显示磁盘上spfile中存储的参数值。
+	select name,value from v$parameter order by name;
+	select name,value from v$spparameter order by name;
+
+	修改参数： alter system set xxx=xxx scope=both/memory/spfile;（系统级）
+			 alter session set xxx=xxx （会话级）
+		both：默认值   memory：当前生效    spfile:写入spfile，重启生效
+	alter system set db_create_file_dest="c:\oraone' scope=memory;
+
+	pfile转spfile: create spfile [='spfilename'] from pfile [='pfilename'];
+	spfile转pfile: create pfile [='pfilename'] from spfile [='spfilename']；
+	如果没有给出spfilename或pfilename，将使用基于ORACLE_HOME和SID的默认名称。
+	
+	参数分为 基本参数和高级参数。
+	select name,value from v$parameter where isbasic='TRUE' order by name;
+	
+
+
+
+	
+作成日：2015/9/23

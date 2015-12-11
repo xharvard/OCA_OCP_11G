@@ -1,0 +1,66 @@
+考试目标：
+	051.5.1	确定可用的分组函数
+	051.5.2	描述分组函数的使用
+	051.5.3	使用GROUP BY子句分组数据
+	051.5.4	使用HAVING子句包含或者排除分组行
+	
+
+
+11.1 分组函数
+	1,COUNT：计算组中的行数。
+		COUNT({* | [DISTINCE|ALL] expr})	expr类型NUMBER,DATE,CHAR,VARCHAR2
+	
+		select count(*) from employees;
+		select count(hire_date) from employees;
+		select count(distinct hire_date) from employees;// 相同的hire_date只计算一次
+		
+	3,SUM:返回组中非空数字的和。
+		SUM([DISTINCT|ALL] expr)		expr类型NUMBER
+
+		select sum(salary) from employees;
+		select sun(distinct salary) from employees; // 相同的salary只计算一次
+
+	3,AVG:平均值，用和除以非空行数。
+		AVG([DISTINCT|ALL] expr)		expr类型NUMBER
+		
+		select avg(salary) from employees;
+		
+	4,MAX,MIN:最大,最小值。
+		MAX|MIN([DISTINCT|ALL] expr)		expr类型NUMBER,DATE,CHAR,VARCHAR2
+		
+		select min(salary), max(salary) from employess;
+
+
+11.2 使用GROUP BY子句分组数据
+	SELECT column|expression|group_function(column|expression)
+	FROM table
+	[WHERE condition(s)]
+	[GROUP BY {col(s) | expr}]
+	[ORDER BY ...]
+	
+	select max(salary),count(*)
+	from employees
+	group by department_id
+	order by department_id;
+
+	单行函数可以嵌套任意层，但分组函数最多嵌套2层。
+
+
+
+11.3 使用HAVING子句包含或者排除分组行
+	SELECT column|expression|group_function(column|expression)
+	FROM table
+	[WHERE condition(s)]
+	[GROUP BY {col(s) | expr}]
+	[HAVING group_conditions(s)]
+	[ORDER BY ...]
+
+	select dept_id, sum(nvl(salary,100))
+	from emp
+	group by dept_id
+	having sum(nvl(salary,100)) > 400;
+
+
+
+
+作成日：2015/10/13

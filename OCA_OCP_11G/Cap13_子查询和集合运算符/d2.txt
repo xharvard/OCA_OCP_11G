@@ -1,0 +1,24 @@
+13.1 描述集合运算符
+	Oracle提供3中集合运算符：UNION,INTERSECT,MINUS。
+		UNION:返回2个查询的合并行，排序这些行并删除重复行。
+		UNION ALL:返回2个查询的合并行，不排序这些行也不删除重复行。
+		INTERSECT:只返回同时出现在2个查询的结果集中的行，排序这些行并删除重复行。
+		MINUS:只返回第一个结果集中的行，这些行没有出现在第二个结果集中，排序这些行并删除重复行。
+
+		select customer_id from customers union select customer_id from orders;
+		
+		复合查询的相关列必须是相同的数据类型组。
+		复合查询的相关列可以有不同的名称，但输入结果集使用第一个查询中列的名称。
+		ORDER BY子句必须放在复合查询的结尾。
+		
+		返回不同列数的处理方法：to_char(null)
+		select name, tail_length, to_char(null) from cats
+		union all
+		select name, to_char(null), wing_span from birds;
+		
+		
+		
+
+
+
+作成日：2015/10/15
